@@ -23,27 +23,33 @@ def main():
     print("Running PR benchmarks...")
     run_cmd(bench_args + ["--save-baseline", "pr"])
     
-    # 3. Revert phf/phf_shared to origin/main (Base)
-    print("Reverting phf and phf_shared to origin/main...")
-    run_cmd(["git", "checkout", "origin/main", "--", "phf", "phf_shared"])
+    # 3. Revert all workspace libraries to origin/main (Base)
+    print("Reverting libraries to origin/main...")
+    run_cmd(["git", "checkout", "origin/main", "--", "phf", "phf_shared", "phf_macros", "phf_codegen", "phf_generator"])
     
     # 4. Run base benchmarks (Stage 1)
     print("Running Base benchmarks...")
     # Clean targets to force compilation with base code
     run_cmd(["cargo", "clean", "-p", "phf"])
     run_cmd(["cargo", "clean", "-p", "phf_shared"])
+    run_cmd(["cargo", "clean", "-p", "phf_macros"])
+    run_cmd(["cargo", "clean", "-p", "phf_codegen"])
+    run_cmd(["cargo", "clean", "-p", "phf_generator"])
     run_cmd(["cargo", "clean", "-p", "asm_test"])
     run_cmd(bench_args + ["--save-baseline", "base"])
     
     # 5. Restore PR libraries
     print("Restoring PR libraries...")
-    run_cmd(["git", "checkout", "HEAD", "--", "phf", "phf_shared"])
-    run_cmd(["git", "reset", "HEAD", "phf", "phf_shared"])
+    run_cmd(["git", "checkout", "HEAD", "--", "phf", "phf_shared", "phf_macros", "phf_codegen", "phf_generator"])
+    run_cmd(["git", "reset", "HEAD", "phf", "phf_shared", "phf_macros", "phf_codegen", "phf_generator"])
     
     # 6. Run comparison
     print("Running comparison benchmarks...")
     run_cmd(["cargo", "clean", "-p", "phf"])
     run_cmd(["cargo", "clean", "-p", "phf_shared"])
+    run_cmd(["cargo", "clean", "-p", "phf_macros"])
+    run_cmd(["cargo", "clean", "-p", "phf_codegen"])
+    run_cmd(["cargo", "clean", "-p", "phf_generator"])
     run_cmd(["cargo", "clean", "-p", "asm_test"])
     run_cmd(bench_args + ["--baseline", "base"])
     

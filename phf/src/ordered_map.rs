@@ -183,6 +183,19 @@ impl<K, V> OrderedMap<K, V> {
                 return None;
             }
 
+            // Fast path: linear scan for tiny maps (entries <= DEFAULT_LAMBDA = 3).
+            // Avoids SipHash entirely; entries are in definition order so
+            // enumerate() gives the correct insertion index directly.
+            if self.entries.len() <= 3 {
+                return self.entries.iter().enumerate().find_map(|(idx, (k, v))| {
+                    if k.phf_eq(key) {
+                        Some((idx, (k, v)))
+                    } else {
+                        None
+                    }
+                });
+            }
+
             let hashes = phf_shared::hash(key, &self.key);
             let idx_index = phf_shared::get_index(&hashes, self.disps, self.idxs.len());
             let idx = self.idxs[idx_index as usize];
@@ -194,6 +207,7 @@ impl<K, V> OrderedMap<K, V> {
                 None
             }
         }
+
 
         #[cfg(feature = "ptrhash")]
         {

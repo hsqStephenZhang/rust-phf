@@ -26,11 +26,24 @@ static LARGE_MAP: phf::Map<&'static str, u32> = phf_map! {
     "key00028" => 28, "key00029" => 29, "key00030" => 30,
 };
 
-fn main() {
+#[cfg(not(feature = "ptrhash"))]
+fn print_info() {
     println!("TINY_MAP:  disps.len={}, entries={}", TINY_MAP.disps.len(), TINY_MAP.len());
     println!("SMALL_MAP: disps.len={}, entries={}", SMALL_MAP.disps.len(), SMALL_MAP.len());
     println!("MED_MAP:   disps.len={}, entries={}", MED_MAP.disps.len(), MED_MAP.len());
     println!("LARGE_MAP: disps.len={}, entries={}", LARGE_MAP.disps.len(), LARGE_MAP.len());
+}
+
+#[cfg(feature = "ptrhash")]
+fn print_info() {
+    println!("TINY_MAP:  entries={}", TINY_MAP.len());
+    println!("SMALL_MAP: entries={}", SMALL_MAP.len());
+    println!("MED_MAP:   entries={}", MED_MAP.len());
+    println!("LARGE_MAP: entries={}", LARGE_MAP.len());
+}
+
+fn main() {
+    print_info();
     println!();
     // 验证 HITS 里的 key 确实都存在
     for k in &["key00001", "key00002", "key00003"] {

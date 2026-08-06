@@ -176,10 +176,7 @@ impl<K, V> Map<K, V> {
         // (~80 instructions). Threshold matches the single-bucket case
         // (disps.len == 1).
         if self.entries.len() <= 3 {
-            return self
-                .entries
-                .iter()
-                .find_map(|(k, v)| if k.phf_eq(key) { Some((k, v)) } else { None });
+            return self.get_entry_linear(key);
         }
 
         let hashes = phf_shared::hash(key, &self.key);
@@ -190,6 +187,18 @@ impl<K, V> Map<K, V> {
         } else {
             None
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn get_entry_linear<T>(&self, key: &T) -> Option<(&K, &V)>
+    where
+        T: Eq + PhfHash + ?Sized,
+        K: PhfEq<T>,
+    {
+        self.entries
+            .iter()
+            .find_map(|(k, v)| if k.phf_eq(key) { Some((k, v)) } else { None })
     }
 
     /// Like `get`, but returns both the key and the value.

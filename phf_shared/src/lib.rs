@@ -61,7 +61,15 @@ pub fn hash<T: ?Sized + PhfHash>(x: &T, key: &HashKey) -> Hashes {
 /// * `len` is the length of `phf_generator::HashState::map`.
 #[inline]
 pub fn get_index(hashes: &Hashes, disps: &[(u32, u32)], len: usize) -> u32 {
-    let (d1, d2) = disps[(hashes.g % (disps.len() as u32)) as usize];
+    // Fast path: single-bucket maps (entries <= DEFAULT_LAMBDA=3).
+    // `g % 1 == 0` always, so the displacement table has exactly one entry.
+    // Skip the `udiv` and the bounds-check by using an unchecked load.
+    let (d1, d2) = if disps.len() == 1 {
+        // SAFETY: branch guarantees disps.len() == 1, so index 0 is valid.
+        unsafe { *disps.get_unchecked(0) }
+    } else {
+        disps[(hashes.g % (disps.len() as u32)) as usize]
+    };
     displace(hashes.f1, hashes.f2, d1, d2) % (len as u32)
 }
 

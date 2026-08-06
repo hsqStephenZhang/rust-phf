@@ -412,18 +412,23 @@ fn build_map(entries: &[Entry], state: HashState) -> proc_macro2::TokenStream {
     {
         let key = state.key;
         let disps = state.disps.iter().map(|&(d1, d2)| quote!((#d1, #d2)));
-        let entries = state.map.iter().map(|&idx| {
+        let keys = state.map.iter().map(|&idx| {
             let entry = &entries[idx];
             let key = &entry.key_expr;
+            quote!(#key)
+        });
+        let values = state.map.iter().map(|&idx| {
+            let entry = &entries[idx];
             let value = &entry.value_expr;
-            quote!((#key, #value))
+            quote!(#value)
         });
 
         quote! {
             phf::Map {
                 key: #key,
                 disps: &[#(#disps),*],
-                entries: &[#(#entries),*],
+                keys: &[#(#keys),*],
+                values: &[#(#values),*],
             }
         }
     }
@@ -433,11 +438,15 @@ fn build_map(entries: &[Entry], state: HashState) -> proc_macro2::TokenStream {
         let key = state.seed;
         let pilots = state.pilots.iter().map(|pilot| quote!(#pilot));
         let remap = state.remap.iter().map(|index| quote!(#index));
-        let entries = state.map.iter().map(|&idx| {
+        let keys = state.map.iter().map(|&idx| {
             let entry = &entries[idx];
             let key = &entry.key_expr;
+            quote!(#key)
+        });
+        let values = state.map.iter().map(|&idx| {
+            let entry = &entries[idx];
             let value = &entry.value_expr;
-            quote!((#key, #value))
+            quote!(#value)
         });
 
         quote! {
@@ -445,7 +454,8 @@ fn build_map(entries: &[Entry], state: HashState) -> proc_macro2::TokenStream {
                 key: #key,
                 pilots: &[#(#pilots),*],
                 remap: &[#(#remap),*],
-                entries: &[#(#entries),*],
+                keys: &[#(#keys),*],
+                values: &[#(#values),*],
             }
         }
     }
@@ -457,10 +467,13 @@ fn build_ordered_map(entries: &[Entry], state: HashState) -> proc_macro2::TokenS
         let key = state.key;
         let disps = state.disps.iter().map(|&(d1, d2)| quote!((#d1, #d2)));
         let idxs = state.map.iter().map(|idx| quote!(#idx));
-        let entries = entries.iter().map(|entry| {
+        let keys = entries.iter().map(|entry| {
             let key = &entry.key_expr;
+            quote!(#key)
+        });
+        let values = entries.iter().map(|entry| {
             let value = &entry.value_expr;
-            quote!((#key, #value))
+            quote!(#value)
         });
 
         quote! {
@@ -468,7 +481,8 @@ fn build_ordered_map(entries: &[Entry], state: HashState) -> proc_macro2::TokenS
                 key: #key,
                 disps: &[#(#disps),*],
                 idxs: &[#(#idxs),*],
-                entries: &[#(#entries),*],
+                keys: &[#(#keys),*],
+                values: &[#(#values),*],
             }
         }
     }
@@ -479,10 +493,13 @@ fn build_ordered_map(entries: &[Entry], state: HashState) -> proc_macro2::TokenS
         let pilots = state.pilots.iter().map(|pilot| quote!(#pilot));
         let remap = state.remap.iter().map(|index| quote!(#index));
         let idxs = state.map.iter().map(|idx| quote!(#idx));
-        let entries = entries.iter().map(|entry| {
+        let keys = entries.iter().map(|entry| {
             let key = &entry.key_expr;
+            quote!(#key)
+        });
+        let values = entries.iter().map(|entry| {
             let value = &entry.value_expr;
-            quote!((#key, #value))
+            quote!(#value)
         });
 
         quote! {
@@ -491,7 +508,8 @@ fn build_ordered_map(entries: &[Entry], state: HashState) -> proc_macro2::TokenS
                 pilots: &[#(#pilots),*],
                 remap: &[#(#remap),*],
                 idxs: &[#(#idxs),*],
-                entries: &[#(#entries),*],
+                keys: &[#(#keys),*],
+                values: &[#(#values),*],
             }
         }
     }

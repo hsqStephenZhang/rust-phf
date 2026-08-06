@@ -288,16 +288,32 @@ impl<'a, K: FmtConst + 'a> fmt::Display for DisplayMap<'a, K> {
             f,
             "
     ],
-    entries: &[",
+    keys: &[",
         )?;
 
-        // write map entries
+        // write map keys
         for &idx in &self.state.map {
             write!(
                 f,
                 "
-        ({}, {}),",
-                Delegate(&self.keys[idx]),
+        {},",
+                Delegate(&self.keys[idx])
+            )?;
+        }
+
+        write!(
+            f,
+            "
+    ],
+    values: &[",
+        )?;
+
+        // write map values
+        for &idx in &self.state.map {
+            write!(
+                f,
+                "
+        {},",
                 &self.values[idx]
             )?;
         }
@@ -349,15 +365,30 @@ impl<'a, K: FmtConst + 'a> fmt::Display for DisplayMap<'a, K> {
             f,
             "
     ],
-    entries: &[",
+    keys: &[",
         )?;
 
         for &idx in &self.state.map {
             write!(
                 f,
                 "
-        ({}, {}),",
-                Delegate(&self.keys[idx]),
+        {},",
+                Delegate(&self.keys[idx])
+            )?;
+        }
+
+        write!(
+            f,
+            "
+    ],
+    values: &[",
+        )?;
+
+        for &idx in &self.state.map {
+            write!(
+                f,
+                "
+        {},",
                 &self.values[idx]
             )?;
         }
@@ -553,14 +584,27 @@ impl<'a, K: FmtConst + 'a> fmt::Display for DisplayOrderedMap<'a, K> {
             f,
             "
     ],
-    entries: &[",
+    keys: &[",
         )?;
-        for (key, value) in self.keys.iter().zip(self.values.iter()) {
+        for key in self.keys {
             write!(
                 f,
                 "
-        ({}, {}),",
-                Delegate(key),
+        {},",
+                Delegate(key)
+            )?;
+        }
+        write!(
+            f,
+            "
+    ],
+    values: &[",
+        )?;
+        for value in self.values {
+            write!(
+                f,
+                "
+        {},",
                 value
             )?;
         }
@@ -627,15 +671,30 @@ impl<'a, K: FmtConst + 'a> fmt::Display for DisplayOrderedMap<'a, K> {
             f,
             "
     ],
-    entries: &[",
+    keys: &[",
         )?;
 
-        for (key, value) in self.keys.iter().zip(self.values.iter()) {
+        for key in self.keys {
             write!(
                 f,
                 "
-        ({}, {}),",
-                Delegate(key),
+        {},",
+                Delegate(key)
+            )?;
+        }
+
+        write!(
+            f,
+            "
+    ],
+    values: &[",
+        )?;
+
+        for value in self.values {
+            write!(
+                f,
+                "
+        {},",
                 value
             )?;
         }

@@ -25,7 +25,9 @@ pub struct OrderedMap<K: 'static, V: 'static> {
     #[doc(hidden)]
     pub idxs: &'static [usize],
     #[doc(hidden)]
-    pub entries: &'static [(K, V)],
+    pub keys: &'static [K],
+    #[doc(hidden)]
+    pub values: &'static [V],
 }
 
 /// An order-preserving immutable map constructed at compile time.
@@ -49,7 +51,9 @@ pub struct OrderedMap<K: 'static, V: 'static> {
     #[doc(hidden)]
     pub idxs: &'static [usize],
     #[doc(hidden)]
-    pub entries: &'static [(K, V)],
+    pub keys: &'static [K],
+    #[doc(hidden)]
+    pub values: &'static [V],
 }
 
 impl<K, V> fmt::Debug for OrderedMap<K, V>
@@ -84,7 +88,8 @@ where
         self.key == other.key
             && self.disps == other.disps
             && self.idxs == other.idxs
-            && self.entries == other.entries
+            && self.keys == other.keys
+            && self.values == other.values
     }
 
     #[cfg(feature = "ptrhash")]
@@ -93,7 +98,8 @@ where
             && self.pilots == other.pilots
             && self.remap == other.remap
             && self.idxs == other.idxs
-            && self.entries == other.entries
+            && self.keys == other.keys
+            && self.values == other.values
     }
 }
 
@@ -108,7 +114,7 @@ impl<K, V> OrderedMap<K, V> {
     /// Returns the number of entries in the `OrderedMap`.
     #[inline]
     pub const fn len(&self) -> usize {
-        self.entries.len()
+        self.keys.len()
     }
 
     /// Returns true if the `OrderedMap` is empty.
@@ -160,7 +166,9 @@ impl<K, V> OrderedMap<K, V> {
     /// Returns references to both the key and values at an index
     /// within the list used to initialize the ordered map. See `.get_index(key)`.
     pub fn index(&self, index: usize) -> Option<(&K, &V)> {
-        self.entries.get(index).map(|(k, v)| (k, v))
+        let k = self.keys.get(index)?;
+        let v = self.values.get(index)?;
+        Some((k, v))
     }
 
     /// Like `get`, but returns both the key and the value.
@@ -186,10 +194,11 @@ impl<K, V> OrderedMap<K, V> {
             let hashes = phf_shared::hash(key, &self.key);
             let idx_index = phf_shared::get_index(&hashes, self.disps, self.idxs.len());
             let idx = self.idxs[idx_index as usize];
-            let entry = &self.entries[idx];
+            let k = &self.keys[idx];
 
-            if entry.0.phf_eq(key) {
-                Some((idx, (&entry.0, &entry.1)))
+            if k.phf_eq(key) {
+                let v = &self.values[idx];
+                Some((idx, (k, v)))
             } else {
                 None
             }
@@ -197,7 +206,7 @@ impl<K, V> OrderedMap<K, V> {
 
         #[cfg(feature = "ptrhash")]
         {
-            if self.entries.is_empty() {
+            if self.keys.is_empty() {
                 return None;
             }
 
@@ -210,10 +219,11 @@ impl<K, V> OrderedMap<K, V> {
                 self.idxs.len(),
             );
             let idx = self.idxs[idx_index as usize];
-            let entry = &self.entries[idx];
+            let k = &self.keys[idx];
 
-            if entry.0.phf_eq(key) {
-                Some((idx, (&entry.0, &entry.1)))
+            if k.phf_eq(key) {
+                let v = &self.values[idx];
+                Some((idx, (k, v)))
             } else {
                 None
             }
@@ -225,7 +235,7 @@ impl<K, V> OrderedMap<K, V> {
     /// Entries are returned in the same order in which they were defined.
     pub fn entries(&self) -> Entries<'_, K, V> {
         Entries {
-            iter: self.entries.iter(),
+            iter: self.keys.iter().zip(self.values.iter()),
         }
     }
 
@@ -234,7 +244,8 @@ impl<K, V> OrderedMap<K, V> {
     /// Keys are returned in the same order in which they were defined.
     pub fn keys(&self) -> Keys<'_, K, V> {
         Keys {
-            iter: self.entries(),
+            iter: self.keys.iter(),
+            _marker: core::marker::PhantomData,
         }
     }
 
@@ -243,7 +254,8 @@ impl<K, V> OrderedMap<K, V> {
     /// Values are returned in the same order in which they were defined.
     pub fn values(&self) -> Values<'_, K, V> {
         Values {
-            iter: self.entries(),
+            iter: self.values.iter(),
+            _marker: core::marker::PhantomData,
         }
     }
 }
@@ -259,7 +271,7 @@ impl<'a, K, V> IntoIterator for &'a OrderedMap<K, V> {
 
 /// An iterator over the entries in a `OrderedMap`.
 pub struct Entries<'a, K, V> {
-    iter: slice::Iter<'a, (K, V)>,
+    iter: core::iter::Zip<slice::Iter<'a, K>, slice::Iter<'a, V>>,
 }
 
 impl<'a, K, V> Clone for Entries<'a, K, V> {
@@ -285,7 +297,7 @@ impl<'a, K, V> Iterator for Entries<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<(&'a K, &'a V)> {
-        self.iter.next().map(|e| (&e.0, &e.1))
+        self.iter.next()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -295,7 +307,7 @@ impl<'a, K, V> Iterator for Entries<'a, K, V> {
 
 impl<'a, K, V> DoubleEndedIterator for Entries<'a, K, V> {
     fn next_back(&mut self) -> Option<(&'a K, &'a V)> {
-        self.iter.next_back().map(|e| (&e.0, &e.1))
+        self.iter.next_back()
     }
 }
 
@@ -305,7 +317,8 @@ impl<'a, K, V> FusedIterator for Entries<'a, K, V> {}
 
 /// An iterator over the keys in a `OrderedMap`.
 pub struct Keys<'a, K, V> {
-    iter: Entries<'a, K, V>,
+    iter: slice::Iter<'a, K>,
+    _marker: core::marker::PhantomData<fn() -> V>,
 }
 
 impl<'a, K, V> Clone for Keys<'a, K, V> {
@@ -313,6 +326,7 @@ impl<'a, K, V> Clone for Keys<'a, K, V> {
     fn clone(&self) -> Self {
         Self {
             iter: self.iter.clone(),
+            _marker: core::marker::PhantomData,
         }
     }
 }
@@ -330,7 +344,7 @@ impl<'a, K, V> Iterator for Keys<'a, K, V> {
     type Item = &'a K;
 
     fn next(&mut self) -> Option<&'a K> {
-        self.iter.next().map(|e| e.0)
+        self.iter.next()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -340,7 +354,7 @@ impl<'a, K, V> Iterator for Keys<'a, K, V> {
 
 impl<'a, K, V> DoubleEndedIterator for Keys<'a, K, V> {
     fn next_back(&mut self) -> Option<&'a K> {
-        self.iter.next_back().map(|e| e.0)
+        self.iter.next_back()
     }
 }
 
@@ -350,7 +364,8 @@ impl<'a, K, V> FusedIterator for Keys<'a, K, V> {}
 
 /// An iterator over the values in a `OrderedMap`.
 pub struct Values<'a, K, V> {
-    iter: Entries<'a, K, V>,
+    iter: slice::Iter<'a, V>,
+    _marker: core::marker::PhantomData<fn() -> K>,
 }
 
 impl<'a, K, V> Clone for Values<'a, K, V> {
@@ -358,6 +373,7 @@ impl<'a, K, V> Clone for Values<'a, K, V> {
     fn clone(&self) -> Self {
         Self {
             iter: self.iter.clone(),
+            _marker: core::marker::PhantomData,
         }
     }
 }
@@ -375,7 +391,7 @@ impl<'a, K, V> Iterator for Values<'a, K, V> {
     type Item = &'a V;
 
     fn next(&mut self) -> Option<&'a V> {
-        self.iter.next().map(|e| e.1)
+        self.iter.next()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -385,7 +401,7 @@ impl<'a, K, V> Iterator for Values<'a, K, V> {
 
 impl<'a, K, V> DoubleEndedIterator for Values<'a, K, V> {
     fn next_back(&mut self) -> Option<&'a V> {
-        self.iter.next_back().map(|e| e.1)
+        self.iter.next_back()
     }
 }
 
